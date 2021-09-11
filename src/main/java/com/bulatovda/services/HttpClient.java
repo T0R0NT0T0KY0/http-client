@@ -1,13 +1,51 @@
 package com.bulatovda.services;
 
+import org.apache.http.client.fluent.Request;
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.entity.ContentType;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.Map;
 
-public interface HttpClient {
+public class HttpClient implements HttpClientInterface {
+	@Override
+	public String get(String uri, Map<String, String> headers, Map<String, String> query) {
+		try {
+			final Request request = Request.Get(addQuery(query, uri));
+			headers.forEach(request::setHeader);
+			return request.execute()
+					.returnContent().asString();
+		} catch (IOException e) {
+			return e.getMessage();
+		}
+	}
 
-	//    https://postman-echo.com/get
-	String get(String url, Map<String, String> headers, Map<String, String> params);
+	private String addQuery(Map<String, String> query, String uri) {
+		try {
+			URIBuilder uriBuilder = new URIBuilder(uri);
+			query.forEach(uriBuilder::setParameter);
+			return uriBuilder.toString();
+		} catch (URISyntaxException e) {
+			System.out.println(e.getMessage());
+			return uri;
+		}
+	}
 
-	//    https://postman-echo.com/post
-	String post(String url, Map<String, String> headers, Map<String, String> params);
-
+	@Override
+	public String post(String url, Map<String, String> headers, Map<String, String> body) {
+		try {
+			final Request request = Request.Post(url);
+			JSONObject json = new JSONObject();
+			headers.forEach(request::addHeader);
+			body.forEach(json::put);
+			return request.bodyString(
+					json.toString(),
+					ContentType.APPLICATION_JSON).execute()
+					.returnContent().asString();
+		} catch (IOException e) {
+			return e.getMessage();
+		}
+	}
 }
